@@ -1,8 +1,10 @@
 package WWW::MeGa::Item::Folder;
-use WWW::MeGa::Item;
-our @ISA = qw(WWW::MeGa::Item);
+use strict;
+use warnings;
 
-our $VERSION = '0.09_1';
+use base 'WWW::MeGa::Item';
+
+our $VERSION = '0.09_2';
 
 sub thumbnail_source
 {
@@ -11,7 +13,7 @@ sub thumbnail_source
 
 	return $thumb if -e $thumb;
 	warn "$thumb not found, autoselecting" if $self->{config}->param('debug');
-	my $first = $self->first or return undef;
+	my $first = $self->first or return;
 	my $item = WWW::MeGa::Item->new($first,$self->{config},$self->{cache});
 	return $item->thumbnail_source;
 }
@@ -21,27 +23,46 @@ sub list
 	my $self = shift;
 	my $thumb = $self->{config}->param('album_thumb');
 	my @dir;
-	opendir DIR, $self->{path};
-	while (my $file = readdir DIR)
+	opendir my $dh, $self->{path};
+	while (my $file = readdir $dh)
 	{
 		next if $file eq '.' or $file eq '..';
 		next if $file eq $thumb;
 		push @dir, File::Spec->catdir($self->{path_rel},$file);
 	}
-	closedir DIR;
+	closedir $dh;
 	return sort @dir
 }
 
 sub first
 {
 	my $self = shift;
-	opendir DIR, $self->{path};
-	while(my $file = readdir DIR)
+	opendir my $dh, $self->{path};
+	while(my $file = readdir $dh)
 	{
 		next if $file eq '.' or $file eq '..';
-		close DIR;
+		close $dh;
 		return File::Spec->catdir($self->{path_rel},$file);
 	}
-	return undef;
+	return;
 }
-1
+
+=head 3 neighbours(file)
+
+return the next and previous file/folder of the given path
+
+=cut
+
+sub neighbours
+{
+	my $self = shift;
+	my $path = shift;
+	my @files = $self->list;
+	my $i;
+	my %index = map { $_ => $i++ } @files;
+
+	my $idx = $index{$path};
+
+	return $files[$idx-1], $files[$idx+1];
+}
+1;

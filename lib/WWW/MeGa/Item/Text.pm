@@ -1,18 +1,21 @@
 package WWW::MeGa::Item::Text;
-use WWW::MeGa::Item;
-our @ISA = qw(WWW::MeGa::Item);
+use strict;
+use warnings;
 
-our $VERSION = '0.09_1';
+use base 'WWW::MeGa::Item';
+
+our $VERSION = '0.09_2';
 
 sub data
 {
 	my ($self, @args) = @_;
 	my $data = $self->SUPER::data($self,@args);
 
-	open FILE, '<', $self->original or die $!;
-	my @f = <FILE>;
-	$data->{CONTENT} = "@f";
-	close FILE;
+	open my $fh, '<', $self->original or die $!;
+	#my @f = <$fh>;
+	$data->{CONTENT} = <$fh>;
+	close $fh;
 	return $data;
 }
-1
+
+1;

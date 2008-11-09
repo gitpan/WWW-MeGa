@@ -1,8 +1,10 @@
 package WWW::MeGa::Item::Video;
-use WWW::MeGa::Item;
-our @ISA = qw(WWW::MeGa::Item);
+use strict;
+use warnings;
 
-our $VERSION = '0.09_1';
+use base 'WWW::MeGa::Item';
+
+our $VERSION = '0.09_2';
 
 sub thumbnail_source
 {
@@ -20,5 +22,7 @@ sub thumbnail_source
 		}
 		return $frame;
 	}
-	return undef;
+	return;
 }
+
+1;

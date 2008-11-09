@@ -1,4 +1,6 @@
 package WWW::MeGa;
+use strict;
+use warnings;
 
 =head1 NAME
 
@@ -61,11 +63,9 @@ use CGI::Application::Plugin::Stream (qw/stream_file/);
 
 use WWW::MeGa::Item;
 
-use strict;
-use warnings;
-use Carp qw(confess); local $SIG{__WARN__} = \&confess;
+use Carp qw(confess);
 
-our $VERSION = '0.09_1';
+our $VERSION = '0.09_2';
 sub setup
 {
 	my $self = shift;
@@ -76,20 +76,20 @@ sub setup
 	{
 		warn "config '$config' not found, consider setting a writable config: PARAMS { config => /path/to/config }";
 		my $cfg = new Config::Simple(syntax=>'simple');
-		$cfg->param('cache', '/tmp/phosy');
+#		$cfg->param('cache', '/tmp/www-mega');
 		$cfg->write($config) or die "could not create config '$config': $!";
 		warn "saved $config";
 	}
-
 	$self->config_file($config) or die "could not load config '$config': $!";
 
 	$self->{sizes} = $self->config_param('sizes') || [ 120, 600, 800 ];
-	$self->config_param('cache', '/tmp/phosy') unless $self->config_param('cache');
+	$self->config_param('cache', '/tmp/www-mega') unless $self->config_param('cache');
 	$self->config_param('album_thumb', 'THUMBNAIL') unless $self->config_param('album_thumb');
 	$self->config_param('thumb-type', 'png') unless $self->config_param('thumb-type');
 	$self->config_param('root', '/usr/share/pixmaps') unless $self->config_param('root');
+	die $self->config_param('root') . " is no directory" unless -d $self->config_param('root');
+
 	$self->config_param('debug',0) unless $self->config_param('debug');
-	#TODO: eventuell nicht als feste dep sondern ShareDir nur benutzen wenn installiert
 	$self->config_param('icons', File::ShareDir::module_dir('WWW::MeGa') . '/icons/') unless $self->config_param('icons');
 
 	$self->{cache} = $self->param('cache');
@@ -102,8 +102,7 @@ sub setup
 	);
 	$self->start_mode('view');
 	$self->error_mode('view_error');
-
-	#die "PARAMS => { gallery_root => '/path/to/gallery' } net set" unless defined $self->param('gallery_root');
+	return;
 }
 
 sub view_error
@@ -122,19 +121,19 @@ sub saneReq
 	my $self = shift;
 	my $param = shift;
 	my $pattern = shift || $self->{PathPattern};
-	my $req = $self->query->param($param) or return undef;
+	my $req = $self->query->param($param) or return;
 	$req =~ s/$pattern//g;
 	return $req;
 }
 
-sub fileReq($)
+sub fileReq
 {
 	my $self = shift;
 	my $path = $self->saneReq('path') or die "want file, got nothing";
 	return $path
 }
 
-sub albumReq
+sub pathReq
 {
 	my $self = shift;
 	my $path = $self->saneReq('path') || '';
@@ -193,8 +192,14 @@ shows a album/folder
 sub view_path
 {
 	my $self = shift;
-	my $path = $self->albumReq;
+	my $path = $self->pathReq;
 	my $size_idx = $self->sizeReq;
+	my $off;
+	{
+		my $tmp = $self->query->param('off');
+		$off = $tmp if $tmp && ($tmp eq 'next' || $tmp eq 'prev');
+	}
+
 	my %sizes =
 	(
 		SIZE => $size_idx,
@@ -202,10 +207,18 @@ sub view_path
 		SIZE_OUT => $size_idx-1
 	);
 
-	my $item = WWW::MeGa::Item->new($path,$self->config(),$self->{cache});
-
 	my @path_e = File::Spec->splitdir($path);
 	my $parent = File::Spec->catdir(@path_e[0 .. @path_e-2]); # bei file: album des files, bei folder: enthaltener folder
+
+	if ($off)
+	{
+		my $pitem = WWW::MeGa::Item->new($parent,$self->config,$self->{cache}); # should be a folder in every case;
+		my @n = $pitem->neighbours($path, $off);
+		$path = $off eq 'next' ? $n[1] : $n[0];
+	}
+
+	my $item = WWW::MeGa::Item->new($path,$self->config,$self->{cache});
+
 
 
 	my $t;
@@ -213,12 +226,13 @@ sub view_path
 	{
 		$t = $self->load_tmpl('album.tmpl', die_on_bad_params=>0, global_vars=>1);
 		my @items = map { (WWW::MeGa::Item->new($_,$self->config(),$self->{cache}))->data } $item->list;
-		$t->param(PARENT => $parent, %sizes, ITEMS => \@items, CONFIG => $self->config->vars);
+		$t->param(PARENT => $parent, %sizes, %{ $item->data }, ITEMS => \@items, CONFIG => { $self->config->vars });
 
 	} else
 	{
 		$t = $self->load_tmpl('image.tmpl', die_on_bad_params=>0, global_vars=>1);
-		$t->param(PARENT => $parent, %sizes, %{ $item->data }, CONFIG => $self->config->vars);
+		my %hash = (PARENT => $parent, %sizes, %{ $item->data }, CONFIG => { $self->config->vars });
+		$t->param(%hash);
 	}
 
 	return $t->output;
@@ -256,4 +270,4 @@ L<CGI::Application>
 
 =cut
 
-1
+1;

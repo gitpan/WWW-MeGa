@@ -1,9 +1,11 @@
-#!/usr/bin/perl -w
-use strict;
-use File::Basename;
 package WWW::MeGa::Item;
+use strict;
+use warnings;
 
-our $VERSION = '0.09_1';
+use Carp qw(confess);
+use File::Basename qw(basename dirname);
+
+our $VERSION = '0.09_2';
 
 sub new
 {
@@ -14,8 +16,8 @@ sub new
 	$self->{cache} = shift;
 
         $self->{path} = File::Spec->catfile($self->{config}->param('root'), $self->{path_rel});	# absolute path to filename
-	$self->{file} = File::Basename::basename $self->{path};		# filename
-	$self->{folder} = File::Basename::dirname $self->{path};	# folder
+	$self->{file} = basename $self->{path};		# filename
+	$self->{folder} = dirname $self->{path};	# folder
 
 
         my $type;
@@ -28,20 +30,17 @@ sub new
                 my $mt = MIME::Types->new();
                 my $mime = $mt->mimeTypeOf($self->{path});
 
-                if ($mime)
-                {
-                        $type = ucfirst ((split '/', $mime)[0]);
-                } else {
-                        $type = 'Other';
-                }
-
+                $type = $mime ? ucfirst ((split '/', $mime)[0]) : 'Other';
         }
         my $class = 'WWW::MeGa::Item::' . ucfirst $type;
-        unless (eval "require $class")
+	# there is no other way to load the module in runtime, so please:
+	unless (eval "require $class")	## no critic
         {
                 $class = 'WWW::MeGa::Item::Other';
-                eval "require $class" or die $!;
+                require WWW::MeGa::Item::Other or confess "$class: $! (@INC)";
         }
+
+	$self->{type} = $type;
 
 	bless $self, $class;
 	return $self;
@@ -71,7 +70,7 @@ sub data
 sub exif
 {
 	my $self = shift;
-        return undef unless $self->{config}->param('exif');
+        return unless $self->{config}->param('exif');
 	#$self->{cache}->{exif}->{23} = "foo";
 
 	return $self->{cache}->{exif}->{$self->{path}} if ($self->{cache}->{exif}->{$self->{path}});
@@ -81,7 +80,7 @@ sub exif
         my %data;
         warn "reading exif from $self->{path}" if $self->{config}->param('debug');
 	my $exif = $et->ImageInfo((-d $self->{path}) ? $self->thumbnail_source : $self->{path});
-	return undef if $exif->{Error};
+	return if $exif->{Error};
 	$self->{cache}->{exif}->{$self->{path}} = $exif;
 	return $exif;
 }
@@ -99,7 +98,7 @@ sub thumbnail_sized
 	my $self = shift;
 	my $size = shift;
 	my $type = shift;
-	my $img = $self->thumbnail_source or die "no thumbnail source for $self->{path}";
+	my $img = $self->thumbnail_source or die "no thumbnail source for $self->{path}, type: $self->{type}";
 	my $ret;
 
         my $image = Image::Magick->new;
@@ -129,7 +128,7 @@ thats the original file it that could be scaled via thumbnail_sized
 sub thumbnail_source
 {
 	my $self = shift;
-	return File::Spec->catdir($self->{config}->param('icons'), Scalar::Util::blessed($self) .'.'. ($self->{config}->param('icons-type') || 'png') );
+	return File::Spec->catdir($self->{config}->param('icons'), $self->{type} .'.'. ($self->{config}->param('icons-type') || 'png') );
 	#use Scalar::Util qw(blessed);
 	#return undef;
 	
@@ -156,11 +155,11 @@ sub thumbnail
 		$self->prepare_dir($sized) or warn "could not create dir for $sized";
 
 		my $data = $self->thumbnail_sized($size,$type);
-		return undef unless $data;
+		return unless $data;
 
-		open FILE, '>' . $sized or warn "could not write thumbnail to $sized";
-		print FILE $data;
-		close FILE;
+		open my $fh, '>', $sized or warn "could not write thumbnail to $sized"; #FIXME: bin-mode?
+		print $fh $data;
+		close $fh;
 	}
 		
 	return $sized;
@@ -182,7 +181,7 @@ sub prepare_dir
 {
 	my $self = shift;
 	my $file = shift;
-	my $folder = File::Basename::dirname $file;
+	my $folder = dirname $file;
 		
 	unless ( -d $folder )
 	{
@@ -190,9 +189,9 @@ sub prepare_dir
 		unless(mkpath $folder)
 		{
 			warn "could not create $folder";
-			return undef;
+			return;
 		}
 	}
 	return $folder;
 }
-1
+1;
