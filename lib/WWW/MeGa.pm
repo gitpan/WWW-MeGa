@@ -1,4 +1,5 @@
 package WWW::MeGa;
+use 5.6.0;
 use strict;
 use warnings;
 
@@ -6,19 +7,11 @@ use warnings;
 
 WWW::MeGa - A MediaGallery
 
-
 =head1 SYNOPSIS
 
+ use WWW::MeGa;
  my $webapp = WWW::MeGa->new
- (
-	PARAMS => { config => /path/to/your/config }
- );
  $webapp->run;
-
-Minimal config:
-
-	root /path/to/your/pictures
-
 
 =head1 DESCRIPTION
 
@@ -46,6 +39,59 @@ to care about setting up picture/thumb dirs.
 
 =back
 
+=head1 CONFIG
+L<WWW::MeGa> uses L<CGI::Application::Plugin::Config::Simple> for config handling.
+You can specify the path to a (writable) config file in the new methode of WWW::MeGa:
+
+   my $gallery = WWW::MeGa->new(PARAMS => { config => '/path/to/gallery.conf' })
+
+It defaults to $RealBin/gallery.conf, see L<RealBin> for more info.
+After the first run it will create a config containing the defaults.
+
+
+=head2 Parameters
+
+=head3 root
+
+Path to your images
+
+
+=head3 cache
+
+Path where to store the thumbnails
+
+=head3 thumb-type
+
+Type of the thumbnails.
+L<WWW::MeGa> uses L<Image::Magick> for generating thumbnails.
+See C<convert -list format> for file types supported by you ImageMagick
+installation.
+
+
+=head3 sizes
+
+A array of valid "thumbnail"/resized image sizes, defaults to
+[ 120, 600, 800 ].
+The CGI parameter C<size> is the index to that array.
+
+
+=head3 debug
+
+If set to 1, enabled debugging to your servers error log.
+
+
+=head3 album_thumb
+
+Specify the name of the image which will be used as a thumbnail for the
+containing album, defaults to THUMBNAIL.
+
+So if you want to have the image C<foo.jpg> be the thumbnail for the album C<bar>, copy it to C<bar/THUMBNAIL> (or use a symlink)
+
+
+=head3 icons and templates
+
+Path to the icons and templates, defaults to C<icons/> in the module's share dir as defined by L<Module::Install> and L<File::ShareDir>
+
 
 =head1 METHODES
 
@@ -55,6 +101,7 @@ use CGI::Application;
 use File::Spec;
 use Scalar::Util;
 use File::ShareDir;
+use FindBin qw($RealBin);
 
 use base ("CGI::Application::Plugin::HTCompiled", "CGI::Application");
 
@@ -63,34 +110,56 @@ use CGI::Application::Plugin::Stream (qw/stream_file/);
 
 use WWW::MeGa::Item;
 
-use Carp qw(confess);
+use Carp;
 
-our $VERSION = '0.09_2';
+our $VERSION = '0.09_3';
 sub setup
 {
 	my $self = shift;
 	$self->{PathPattern} = "[^-,()'.\/ _0-9A-Za-z\x80-\xff\[\]]";
-	my $config = $self->config_file($self->param('config') || 'gallery.conf');
+	
+	my $share = eval { File::ShareDir::module_dir('WWW::MeGa') } || "$RealBin/../share";
+
+	my $config = $self->config_file($self->param('config') || "$RealBin/gallery.conf");
+
+	my %default_config =
+	(
+		'sizes' => [ 120, 600, 800 ],
+		'cache' => '/tmp/www-mega',
+		'album_thumb' => 'THUMBNAIL',
+		'thumb-type' => 'png',
+		'root' => File::Spec->catdir($share, 'images'),
+		'debug' => 0,
+		'icons' => File::Spec->catdir($share, 'icons'),
+		'templates' => File::Spec->catdir($share, 'templates', 'default')
+	);
 
 	unless ( -e $config )
 	{
-		warn "config '$config' not found, consider setting a writable config: PARAMS { config => /path/to/config }";
+		warn "config '$config' not found, creating default config";
 		my $cfg = new Config::Simple(syntax=>'simple');
-#		$cfg->param('cache', '/tmp/www-mega');
-		$cfg->write($config) or die "could not create config '$config': $!";
-		warn "saved $config";
+		foreach my $k (keys %default_config)
+		{
+			$cfg->param($k, $default_config{$k})
+		}
+
+		warn "saving $config";
+		$cfg->write($config) or croak "could not create config '$config': $!";
 	}
-	$self->config_file($config) or die "could not load config '$config': $!";
 
-	$self->{sizes} = $self->config_param('sizes') || [ 120, 600, 800 ];
-	$self->config_param('cache', '/tmp/www-mega') unless $self->config_param('cache');
-	$self->config_param('album_thumb', 'THUMBNAIL') unless $self->config_param('album_thumb');
-	$self->config_param('thumb-type', 'png') unless $self->config_param('thumb-type');
-	$self->config_param('root', '/usr/share/pixmaps') unless $self->config_param('root');
-	die $self->config_param('root') . " is no directory" unless -d $self->config_param('root');
+	$self->config_file($config) or croak "could not load config '$config': $!";
 
-	$self->config_param('debug',0) unless $self->config_param('debug');
-	$self->config_param('icons', File::ShareDir::module_dir('WWW::MeGa') . '/icons/') unless $self->config_param('icons');
+	foreach my $k (keys %default_config)
+	{
+		next if $self->config_param($k);
+		$self->config_param($k, $default_config{$k});
+	}
+
+	croak $self->config_param('root') . " is no directory" unless -d $self->config_param('root');
+
+	$self->tmpl_path($self->config_param('templates'));
+
+	$self->{sizes} = $self->config_param('sizes');
 
 	$self->{cache} = $self->param('cache');
 
@@ -158,6 +227,7 @@ the public runmodes, accessable via the C<rm> parameter
 shows a thumbnail
 
 =cut
+
 sub view_image
 {
 	my $self = shift;
@@ -170,11 +240,13 @@ sub view_image
 	return $self->binary($item, $size);
 }
 
+
 =head3 original
 
 shows the original file
 
 =cut
+
 sub view_original
 {
 	my $self = shift;
@@ -184,11 +256,13 @@ sub view_original
 	return $self->binary($item);
 }
 
+
 =head3 view
 
 shows a album/folder
 
 =cut
+
 sub view_path
 {
 	my $self = shift;
@@ -259,14 +333,22 @@ sub binary
 	}
 }
 
-=head1 AUTHOR
+=head1 COPYRIGHT
 
-Johannes 'fish' Ziemke <my nickname at cpan org>
+Copyright 2008 by Johannes 'fish' Ziemke.
+
+This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 
 =head1 SEE ALSO
 
 L<CGI::Application>
+
+
+=head1 AUTHOR
+
+Johannes 'fish' Ziemke <my nickname at cpan org>
+
 
 =cut
 
