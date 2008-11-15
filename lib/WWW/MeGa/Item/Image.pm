@@ -1,3 +1,4 @@
+# $Id: Image.pm 175 2008-11-14 18:04:35Z fish $
 package WWW::MeGa::Item::Image;
 use strict;
 use warnings;
@@ -5,7 +6,6 @@ use warnings;
 =head1 NAME
 
 WWW::MeGa::Item::Image - Representing a image in L<WWW::MeGa>
-
 
 =head1 DESCRIPTION
 
@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_3';
+our $VERSION = '0.09_4';
 
 
 =head2 thumbnail_source

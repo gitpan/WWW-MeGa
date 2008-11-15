@@ -1,3 +1,4 @@
+# $Id: Audio.pm 175 2008-11-14 18:04:35Z fish $
 package WWW::MeGa::Item::Audio;
 use strict;
 use warnings;
@@ -5,7 +6,6 @@ use warnings;
 =head1 NAME
 
 WWW::MeGa::Item::Audio - Representing a audio file in L<WWW::MeGa>
-
 
 =head1 DESCRIPTION
 
@@ -16,6 +16,6 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_3';
+our $VERSION = '0.09_4';
 
 1;

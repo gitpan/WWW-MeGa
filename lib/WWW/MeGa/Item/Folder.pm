@@ -1,3 +1,4 @@
+# $Id: Folder.pm 175 2008-11-14 18:04:35Z fish $
 package WWW::MeGa::Item::Folder;
 use strict;
 use warnings;
@@ -5,7 +6,6 @@ use warnings;
 =head1 NAME
 
 WWW::MeGa::Item::Folder - Representing a folder / album in L<WWW::MeGa>
-
 
 =head1 DESCRIPTION
 
@@ -18,7 +18,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_3';
+our $VERSION = '0.09_4';
 
 
 =head2 thumbnail_source
@@ -67,7 +67,7 @@ sub list
 
 =head2 first
 
-returns the first file of the directory
+returns the first file of the directory.
 
 =cut
 
@@ -84,9 +84,9 @@ sub first
 	return;
 }
 
-=head 3 neighbours($path)
+=head2 neighbours($path)
 
-return the item before and after the item specified by $path in the directory
+return the item before and after the item specified by $path in the represented directory.
 
 =cut
 
