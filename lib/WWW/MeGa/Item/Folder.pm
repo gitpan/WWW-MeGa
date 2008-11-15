@@ -1,4 +1,4 @@
-# $Id: Folder.pm 175 2008-11-14 18:04:35Z fish $
+# $Id: Folder.pm 178 2008-11-15 13:19:29Z fish $
 package WWW::MeGa::Item::Folder;
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_4';
+our $VERSION = '0.09_5';
 
 
 =head2 thumbnail_source

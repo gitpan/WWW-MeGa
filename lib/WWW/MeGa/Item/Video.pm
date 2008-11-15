@@ -1,4 +1,4 @@
-# $Id: Video.pm 175 2008-11-14 18:04:35Z fish $
+# $Id: Video.pm 178 2008-11-15 13:19:29Z fish $
 package WWW::MeGa::Item::Video;
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_4';
+our $VERSION = '0.09_5';
 
 
 =head2 thumbnail_source
@@ -39,7 +39,7 @@ sub thumbnail_source
 		unless (-e $frame)
 		{
 			$self->prepare_dir($frame) or die "could not create dir for $frame";
-			system('/usr/bin/ffmpeg', '-i', $self->{path}, '-f', 'image2', '-ss', 10, '-vframes', 1, $frame);
+			system($self->{config}->param('ffmpeg-path'), '-i', $self->{path}, '-f', 'image2', '-ss', $self->{config}->param('video-thumbs-offset'), '-vframes', 1, $frame);
 		}
 		return $frame;
 	}
