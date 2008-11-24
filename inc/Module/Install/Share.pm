@@ -6,7 +6,7 @@ use Module::Install::Base;
 
 use vars qw{$VERSION $ISCORE @ISA};
 BEGIN {
-	$VERSION = '0.75';
+	$VERSION = '0.64';
 	$ISCORE  = 1;
 	@ISA     = qw{Module::Install::Base};
 }
@@ -19,18 +19,10 @@ sub install_share {
 		$dir = 'share';
 	}
 
-	# If the module name and dist name don't math,
-	# the dist_dir won't subsequently work.
-	# my $module_name = $self->name;
-	# $module_name =~ s/-/::/g;
-	# if ( defined $self->module_name and $module_name ne $self->module_name ) {
-	#	die "For File::ShareDir::dist_dir to work, the module and distribution names much match";
-	# }
-
 	$self->postamble(<<"END_MAKEFILE");
 config ::
 \t\$(NOECHO) \$(MOD_INSTALL) \\
-\t\t"$dir" \$(INST_AUTODIR)
+\t\t\"$dir\" \$(INST_AUTODIR)
 
 END_MAKEFILE
 
@@ -39,13 +31,10 @@ END_MAKEFILE
 	# So when we need to install a share directory, make sure we add a
 	# dependency on a moderately new version of ExtUtils::MakeMaker.
 	$self->build_requires( 'ExtUtils::MakeMaker' => '6.11' );
-
-	# 99% of the time we don't want to index a shared dir
-	$self->no_index( directory => $dir );
 }
 
 1;
 
 __END__
 
-#line 109
+#line 98

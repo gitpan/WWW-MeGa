@@ -1,4 +1,4 @@
-# $Id: Text.pm 178 2008-11-15 13:19:29Z fish $
+# $Id: Text.pm 181 2008-11-15 16:31:00Z fish $
 package WWW::MeGa::Item::Text;
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_5';
+our $VERSION = '0.09_6';
 
 
 =head1 data

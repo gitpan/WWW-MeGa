@@ -1,4 +1,4 @@
-# $Id: Item.pm 178 2008-11-15 13:19:29Z fish $
+# $Id: Item.pm 181 2008-11-15 16:31:00Z fish $
 package WWW::MeGa::Item;
 use strict;
 use warnings;
@@ -46,7 +46,7 @@ use Carp qw(confess);
 use File::Basename qw(basename dirname);
 use constant ICON_TYPE => 'png';
 
-our $VERSION = '0.09_5';
+our $VERSION = '0.09_6';
 
 =head2 new($relative_path, $config, $cache)
 
