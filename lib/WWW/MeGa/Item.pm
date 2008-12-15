@@ -1,4 +1,4 @@
-# $Id: Item.pm 181 2008-11-15 16:31:00Z fish $
+# $Id: Item.pm 190 2008-12-15 13:51:54Z fish $
 package WWW::MeGa::Item;
 use strict;
 use warnings;
@@ -46,7 +46,7 @@ use Carp qw(confess);
 use File::Basename qw(basename dirname);
 use constant ICON_TYPE => 'png';
 
-our $VERSION = '0.09_6';
+our $VERSION = '0.1';
 
 =head2 new($relative_path, $config, $cache)
 
@@ -80,6 +80,7 @@ sub new
                 use MIME::Types;
                 my $mt = MIME::Types->new();
                 my $mime = $mt->mimeTypeOf($self->{path});
+		$self->{mime} = $mime;
 
                 $type = $mime ? ucfirst ((split '/', $mime)[0]) : 'Other';
         }
@@ -214,7 +215,7 @@ If no, try to create it first by calling C<$self->thumbnail_sized>
 sub thumbnail
 {
 	my $self = shift;
-	my $size = shift;
+	my $size = shift or return $self->{path};
 	my $type = $self->{config}->param('thumb-type');
 	my $cache = $self->{config}->param('cache');
 	my $sized = File::Spec->catdir($cache, $self->{path} . '_' . $size . '.' . $type);
@@ -234,20 +235,6 @@ sub thumbnail
 		return $sized;
 	}
 	warn "could not write thumbnail to $sized: $!";
-}
-
-
-=head2 original
-
-returns the original file
-
-=cut
-
-sub original
-{
-	my $self = shift;
-	die "file '$self->{path}' does not exist" unless -f $self->{path};
-	return $self->{path};
 }
 
 sub prepare_dir

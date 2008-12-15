@@ -1,4 +1,4 @@
-# $Id: Text.pm 181 2008-11-15 16:31:00Z fish $
+# $Id: Text.pm 190 2008-12-15 13:51:54Z fish $
 package WWW::MeGa::Item::Text;
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.09_6';
+our $VERSION = '0.1';
 
 
 =head1 data
@@ -32,7 +32,7 @@ sub data
 	my $self = shift;
 	my $data = $self->SUPER::data;
 
-	open my $fh, '<', $self->original or die $!;
+	open my $fh, '<', $self->{path} or die $!;
 	$data->{CONTENT} = <$fh>;
 	close $fh;
 	return $data;

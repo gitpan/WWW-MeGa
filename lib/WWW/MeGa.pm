@@ -1,4 +1,4 @@
-# $Id: MeGa.pm 185 2008-11-18 15:48:39Z fish $
+# $Id: MeGa.pm 190 2008-12-15 13:51:54Z fish $
 package WWW::MeGa;
 use 5.6.0;
 use strict;
@@ -226,7 +226,7 @@ use WWW::MeGa::Item;
 
 use Carp;
 
-our $VERSION = '0.09_6';
+our $VERSION = '0.1';
 sub setup
 {
 	my $self = shift;
@@ -285,7 +285,6 @@ sub setup
 	(
 		view => 'view_path',
 		image => 'view_image',
-		original => 'view_original',
 	);
 	$self->start_mode('view');
 	$self->error_mode('view_error');
@@ -308,7 +307,7 @@ sub saneReq
 	my $self = shift;
 	my $param = shift;
 	my $pattern = shift || $self->{PathPattern};
-	my $req = $self->query->param($param) or return;
+	defined(my $req = $self->query->param($param)) or return;
 	$req =~ s/$pattern//g;
 	return $req;
 }
@@ -330,7 +329,7 @@ sub pathReq
 sub sizeReq
 {
 	my $self = shift;
-	my $size = $self->saneReq('size', '[^0-9]') or return 0; #return @{$self->{sizes}}[0];
+	defined ( my $size = $self->saneReq('size', '[^0-9]') ) or return; # 0; #return @{$self->{sizes}}[0];
 	die "no size '$size'" unless $self->{sizes}->[$size];
 	return $size;
 }
@@ -351,27 +350,10 @@ sub view_image
 	my $self = shift;
 	my $path = $self->fileReq;
 
-	my $size = $self->{sizes}->[$self->sizeReq];
+	my $s = $self->sizeReq;
+	my $item = WWW::MeGa::Item->new($path,$self->config,$self->{cache});
 
-	my $item = WWW::MeGa::Item->new($path,$self->config(),$self->{cache});
-
-	return $self->binary($item, $size);
-}
-
-
-=head3 original
-
-shows the original file
-
-=cut
-
-sub view_original
-{
-	my $self = shift;
-	my $path = $self->fileReq;
-
-	my $item = WWW::MeGa::Item->new($path,$self->config(),$self->{cache});
-	return $self->binary($item);
+	return $self->binary($item, defined $s ? $self->{sizes}->[$s] : undef);
 }
 
 
@@ -385,7 +367,7 @@ sub view_path
 {
 	my $self = shift;
 	my $path = $self->pathReq;
-	my $size_idx = $self->sizeReq;
+	my $size_idx = $self->sizeReq || 0;
 	my $off;
 	{
 		my $tmp = $self->query->param('off');
@@ -413,19 +395,21 @@ sub view_path
 
 
 
-	my $t;
+	my %hash = (PARENT => $parent, %sizes, %{ $item->data }, CONFIG => { $self->config->vars }, MIME => $item->{mime});
+	my $template;
+
 	if (Scalar::Util::blessed($item) eq 'WWW::MeGa::Item::Folder')
 	{
-		$t = $self->load_tmpl('album.tmpl', die_on_bad_params=>0, global_vars=>1);
+		$template = 'album.tmpl';
 		my @items = map { (WWW::MeGa::Item->new($_,$self->config(),$self->{cache}))->data } $item->list;
-		$t->param(PARENT => $parent, %sizes, %{ $item->data }, ITEMS => \@items, CONFIG => { $self->config->vars });
-
+		$hash{ITEMS} = \@items;
 	} else
 	{
-		$t = $self->load_tmpl('image.tmpl', die_on_bad_params=>0, global_vars=>1);
-		my %hash = (PARENT => $parent, %sizes, %{ $item->data }, CONFIG => { $self->config->vars });
-		$t->param(%hash);
+		$template = 'image.tmpl';
 	}
+
+	my $t = $self->load_tmpl($template, die_on_bad_params=>0, global_vars=>1);
+	$t->param(%hash);
 
 	return $t->output;
 }
@@ -439,16 +423,8 @@ sub binary
 	my $item = shift;
 	my $size = shift;
 
-
-	if ($size)
-	{
-		# $self->header_add( -'Content-disposition' => 'inline' );
-		return $self->stream_file($item->thumbnail($size)) ? undef : $self->error_mode;
-	} else
-	{
-		# $self->header_add( -attachment => $item->{file} );
-		return $self->stream_file($item->original) ? undef : $self->error_mode;
-	}
+	$self->header_add( -'Content-disposition' => 'inline' );
+	return $self->stream_file($item->thumbnail($size)) ? undef : $self->error_mode;
 }
 
 =head1 FAQ
