@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.1.1';
+our $VERSION = '0.11';
 
 
 =head1 data
