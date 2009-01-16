@@ -1,4 +1,4 @@
-# $Id: Image.pm 190 2008-12-15 13:51:54Z fish $
+# $Id: Image.pm 193 2009-01-16 13:42:25Z fish $
 package WWW::MeGa::Item::Image;
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ See L<WWW::MeGa::Item>
 
 use base 'WWW::MeGa::Item';
 
-our $VERSION = '0.1';
+our $VERSION = '0.1.1';
 
 
 =head2 thumbnail_source
